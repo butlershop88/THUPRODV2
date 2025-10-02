@@ -1,6 +1,6 @@
 {
-  "name": "Registro Tareas V2",
-  "short_name": "TareasV2", 
+  "name": "THUprod",
+  "short_name": "THUprod", 
   "description": "Aplicación mejorada para registrar tareas por puestos",
   "start_url": "./index.html?v=2",
   "display": "standalone",
