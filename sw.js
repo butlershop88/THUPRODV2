@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tareas-app-v20'; // Aumenta este número en cada actualización
+const CACHE_NAME = 'tareas-app-v21'; // Aumenta este número en cada actualización
 const urlsToCache = [
     './',
     './index.html',
