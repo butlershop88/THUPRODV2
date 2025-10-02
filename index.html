@@ -1,59 +1,76 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Tareas</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#343a40">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Registro de Tareas</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#343a40" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <button id="theme-toggle">🌙</button>
-    <h2>Registro de Tareas</h2>
+  <button id="theme-toggle">🌙</button>
+  <h2>Registro de Tareas</h2>
 
-    <div class="modo-toggle mb-3">
-        <button data-vista="actual" class="active">Hoy</button>
-        <button data-vista="historial">Historial</button>
-        <button data-vista="horas">Horas</button>
-        <button data-vista="graficas">Gráficas</button>
-    </div>
+  <div class="modo-toggle mb-3">
+    <button data-vista="actual" class="active">Hoy</button>
+    <button data-vista="historial">Historial</button>
+    <button data-vista="horas">Horas</button>
+    <button data-vista="graficas">Gráficas</button>
+  </div>
 
-    <div id="vista-actual" class="vista-container active">
-        <div class="input-group mb-3">
-            <input type="number" id="nuevo-puesto-input" placeholder="Nº de puesto">
-            <button id="add-puesto-btn">Añadir</button>
-        </div>
-        <div id="puestos-container"></div>
-        <h3 class="mt-4">Resumen Diario</h3>
-        <div id="dashboard-container"></div>
-        <h3 class="mt-4">Registro de Hoy</h3>
-        <button id="clear-today-btn" class="danger">Limpiar Hoy</button>
-        <div id="log-container"></div>
+  <div id="vista-actual" class="vista-container active">
+    <div class="input-group mb-3">
+      <input
+        type="number"
+        id="nuevo-puesto-input"
+        placeholder="Nº de puesto"
+      />
+      <button id="add-puesto-btn">Añadir</button>
     </div>
+    <div id="puestos-container"></div>
+    <h3 class="mt-4">Resumen Diario</h3>
+    <div id="dashboard-container"></div>
+    <h3 class="mt-4">Registro de Hoy</h3>
+    <button id="clear-today-btn" class="danger">Limpiar Hoy</button>
+    <div id="log-container"></div>
+  </div>
 
-    <div id="vista-historial" class="vista-container">
-        <h3>Historial Completo</h3>
-        <div id="historial-container"></div>
+  <div id="vista-historial" class="vista-container">
+    <h3>Historial</h3>
+    <div class="hist-tabs">
+      <button data-sub="completo" class="active">Historial Completo</button>
+      <button data-sub="compact">Resumen por días</button>
     </div>
-    
-    <div id="vista-horas" class="vista-container">
-        <h3>Distribución de Horas (7h 45min)</h3>
-        <div id="horas-container"></div>
-    </div>
+    <div id="hist-completo"></div>
+    <div id="hist-compact" style="display:none"></div>
+  </div>
 
-    <div id="vista-graficas" class="vista-container">
-        <h3>Análisis de Productividad</h3>
-        <div class="filtros-graficas mb-3">
-            <button data-periodo="daily" class="active">Diario</button>
-            <button data-periodo="weekly">Semanal</button>
-            <button data-periodo="biweekly">Quincenal</button>
-            <button data-periodo="monthly">Mensual</button>
-        </div>
-        <div style="height:400px;"><canvas id="grafico-puestos"></canvas></div>
+  <div id="vista-horas" class="vista-container">
+    <h3>Distribución de Horas</h3>
+    <div class="horas-filtros">
+      <button data-rango="hoy" class="active">Hoy</button>
+      <button data-rango="ayer">Ayer</button>
+      <button data-rango="7dias">Últimos 7 días</button>
+      <button data-rango="mes">Mes actual</button>
     </div>
+    <div id="horas-container"></div>
+  </div>
 
-    <script src="app.js"></script>
+  <div id="vista-graficas" class="vista-container">
+    <h3>Análisis de Productividad</h3>
+    <div class="filtros-graficas mb-3">
+      <button data-periodo="daily" class="active">Diario</button>
+      <button data-periodo="weekly">Semanal</button>
+      <button data-periodo="biweekly">Quincenal</button>
+      <button data-periodo="monthly">Mensual</button>
+    </div>
+    <div style="height: 400px">
+      <canvas id="grafico-puestos"></canvas>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
