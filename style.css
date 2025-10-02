@@ -10,6 +10,9 @@
   --info: #0dcaf0;
   --card-border-light: #dee2e6;
   --card-border-dark: #495057;
+  --color-p: #FFA500; /* Naranja */
+  --color-b: #808080; /* Gris */
+  --color-c: #A52A2A; /* Marrón */
 }
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
@@ -99,7 +102,6 @@ body.dark-mode .puesto {
   flex-wrap: wrap;
 }
 .tarea-buttons button {
-  background-color: var(--primary);
   color: white;
   border: none;
   padding: 10px 15px;
@@ -109,6 +111,15 @@ body.dark-mode .puesto {
 }
 .tarea-buttons button.F-P {
   background-color: var(--success);
+}
+.tarea-buttons button.P {
+  background-color: var(--color-p);
+}
+.tarea-buttons button.B {
+  background-color: var(--color-b);
+}
+.tarea-buttons button.C {
+  background-color: var(--color-c);
 }
 .log-entry {
   display: flex;
