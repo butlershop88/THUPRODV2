@@ -5,10 +5,10 @@ document.addEventListener('DOMContentLoaded', () => {
     abrev: { 'Flejar+Paquete': 'F+P', Paquete: 'P', Bobina: 'B', Cuna: 'C' },
     tiempos: { 'Flejar+Paquete': 6, Paquete: 3, Bobina: 8, Cuna: 5 },
     coloresTareas: {
-      'Flejar+Paquete': 'rgba(25, 135, 84, 0.8)',
-      Paquete: 'rgba(13, 110, 253, 0.8)',
-      Bobina: 'rgba(255, 193, 7, 0.8)',
-      Cuna: 'rgba(220, 53, 69, 0.8)',
+      'Flejar+Paquete': 'rgba(25, 135, 84, 0.8)', // verde
+      Paquete: '#FFA500', // naranja para P
+      Bobina: '#808080', // gris para B
+      Cuna: '#A52A2A', // marrón claro para C
     },
     coloresFijosPuestos: ['#FF4D4D', '#4DB3FF', '#6CFF6C', '#FFF04D'], // rojo, azul, verde, amarillo fosforito
     paletaFosforito: [
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
       '#FFD966',
       '#A8E6CF',
       '#FF8E99',
-    ], // naranja, rosa, cian ...
+    ],
     JORNADA_MINUTOS: 465,
   };
 
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const saveColorPuestos = () => localStorage.setItem('colorPuestos', JSON.stringify(state.colorPuestos));
   const getHoy = () => new Date().toDateString();
 
-  // Funciones de fecha ISO
+  // Funciones auxiliares para fechas
   function yyyyMmDd(dateObj) {
     const d = new Date(dateObj);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return raw ? JSON.parse(raw) : null;
   }
 
-  // Funcion para obtener color por puesto
+  // Function para obtener colores vivos fosforitos
   function getColorPuesto(puesto) {
     if (state.colorPuestos[puesto]) return state.colorPuestos[puesto];
 
@@ -80,14 +80,13 @@ document.addEventListener('DOMContentLoaded', () => {
     return state.colorPuestos[puesto];
   }
 
-  // Renderizado completo
+  // Renderizado UI completo
   function renderAll() {
     renderPuestos();
     renderDashboard();
     renderLog();
   }
 
-  // Render puesto en UI
   function renderPuestos() {
     document.getElementById('puestos-container').innerHTML = state.puestos
       .map(
@@ -104,7 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .join('');
   }
 
-  // Render Resumen Diario y guardado
   function renderDashboard() {
     const hoyISO = yyyyMmDd(new Date());
     const logHoy = state.log.filter((l) => l.fecha === getHoy());
@@ -135,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('dashboard-container').innerHTML = table + '</tbody></table>';
   }
 
-  // Render Log del dia
   function renderLog() {
     document.getElementById('log-container').innerHTML = state.log
       .filter((l) => l.fecha === getHoy())
@@ -151,7 +148,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .join('');
   }
 
-  // Historial Completo
   function renderHistorialCompleto() {
     const cont = document.getElementById('hist-completo');
     const logAgrupado = state.log.reduce((acc, l) => {
@@ -180,7 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .join('');
   }
 
-  // Historial Compacto (Resumen Diario por días)
   function renderHistorialCompact() {
     const cont = document.getElementById('hist-compact');
     const fechasSet = new Set(state.log.map((l) => yyyyMmDd(new Date(l.fecha))));
@@ -221,7 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .join('');
   }
 
-  // Calculo fechas para filtros Horas
   function fechasDeRango(rango) {
     const hoy = new Date();
     const start = new Date(hoy);
@@ -239,7 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return { start, end };
   }
 
-  // Render Horas con persistencia y filtro por rango
   function renderDistribucionHoras(rango = 'hoy') {
     const cont = document.getElementById('horas-container');
     const { start, end } = fechasDeRango(rango);
@@ -288,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
     cont.innerHTML = html;
   }
 
-  // Render Grafico de productividad
   function renderGraficas(periodo) {
     if (state.chartInstance) state.chartInstance.destroy();
 
@@ -337,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- EVENTOS Y LISTENERS ---
+  // EVENTOS
   function setupListeners() {
     document.getElementById('theme-toggle').addEventListener('click', () => {
       document.body.classList.toggle('dark-mode');
@@ -457,4 +449,4 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   init();
 });
-           
+      
