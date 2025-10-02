@@ -235,51 +235,53 @@ document.addEventListener('DOMContentLoaded', () => {
   // Render Horas con persistencia y filtro por rango
   function renderDistribucionHoras(rango = 'hoy') {
     const cont = document.getElementById('horas-container');
-    const { start, end } = fechasDeRango(rango);
-    const fechasSet = new Set();
-    state.log.forEach((l) => {
-      const d = new Date(l.fecha);
-      if (d >= start && d <= end) fechasSet.add(yyyyMmDd(d));
+
+    // Forzar el rango a 'hoy' para esta pestaña
+    const { start, end } = fechasDeRango('hoy');
+
+    const logHoy = state.log.filter(l => {
+        const d = new Date(l.fecha);
+        return d >= start && d <= end;
     });
-    const fechas = Array.from(fechasSet).sort((a, b) => new Date(a) - new Date(b));
-    if (fechas.length === 0) {
-      cont.innerHTML = '<p>No hay datos en el rango seleccionado.</p>';
-      return;
+
+    if (logHoy.length === 0) {
+        cont.innerHTML = '<p>No hay datos para hoy.</p>';
+        return;
     }
-    let html = '';
-    fechas.forEach((fechaISO) => {
-      let horasData = loadHoras(fechaISO);
-      if (!horasData) {
-        const fechaStr = new Date(fechaISO).toDateString();
-        const delDia = state.log.filter((l) => l.fecha === fechaStr);
-        const esfuerzo = delDia.reduce((acc, l) => {
-          acc[l.puesto] = (acc[l.puesto] || 0) + (config.tiempos[l.tarea] || 0);
-          return acc;
-        }, {});
-        const total = Object.values(esfuerzo).reduce((s, v) => s + v, 0) || 1;
-        const asignacion = {};
-        Object.keys(esfuerzo).forEach((p) => {
-          const minutos = (esfuerzo[p] / total) * config.JORNADA_MINUTOS;
-          asignacion[p] = { minutos, horasDecimal: minutos / 60 };
-        });
-        horasData = { fecha: fechaISO, asignacion };
-        saveHoras(fechaISO, horasData);
-      }
-      const titulo = new Date(fechaISO).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-      let tabla = '<table class="tabla-resumen"><thead><tr><th>Puesto</th><th>Tiempo Asignado</th><th>Decimal</th></tr></thead><tbody>';
-      Object.keys(horasData.asignacion)
-        .sort((a, b) => horasData.asignacion[b].minutos - horasData.asignacion[a].minutos)
-        .forEach((p) => {
-          const mins = horasData.asignacion[p].minutos;
-          tabla += `<tr><td><strong style="color:${getColorPuesto(p)};">P${p}</strong></td><td>${Math.floor(mins / 60)}h ${Math.round(mins % 60)}min</td><td>${horasData.asignacion[
-            p
-          ].horasDecimal.toFixed(2)}</td></tr>`;
-        });
-      tabla += '</tbody></table>';
-      html += `<div class="puesto"><h4>${titulo}</h4>${tabla}</div>`;
+
+    const esfuerzo = logHoy.reduce((acc, l) => {
+        acc[l.puesto] = (acc[l.puesto] || 0) + (config.tiempos[l.tarea] || 0);
+        return acc;
+    }, {});
+
+    const totalEsfuerzo = Object.values(esfuerzo).reduce((s, v) => s + v, 0);
+
+    if (totalEsfuerzo === 0) {
+        cont.innerHTML = '<p>No hay tareas con tiempo asignado para hoy.</p>';
+        return;
+    }
+
+    const asignacion = {};
+    Object.keys(esfuerzo).forEach(p => {
+        const minutos = (esfuerzo[p] / totalEsfuerzo) * config.JORNADA_MINUTOS;
+        asignacion[p] = { minutos, horasDecimal: minutos / 60 };
     });
-    cont.innerHTML = html;
-  }
+
+    const hoyISO = yyyyMmDd(new Date());
+    const horasData = { fecha: hoyISO, asignacion };
+    saveHoras(hoyISO, horasData);
+
+    let tabla = '<table class="tabla-resumen"><thead><tr><th>Puesto</th><th>Tiempo Asignado</th><th>Decimal</th></tr></thead><tbody>';
+    Object.keys(asignacion)
+        .sort((a, b) => asignacion[b].minutos - asignacion[a].minutos)
+        .forEach(p => {
+            const { minutos, horasDecimal } = asignacion[p];
+            tabla += `<tr><td><strong style="color:${getColorPuesto(p)};">P${p}</strong></td><td>${Math.floor(minutos / 60)}h ${Math.round(minutos % 60)}min</td><td>${horasDecimal.toFixed(2)}</td></tr>`;
+        });
+    tabla += '</tbody></table>';
+
+    cont.innerHTML = `<div class="puesto"><h4>Distribución para Hoy</h4>${tabla}</div>`;
+}
 
   // Render Grafico
   function renderGraficas(periodo) {
