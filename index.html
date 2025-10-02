@@ -10,22 +10,23 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <button id="theme-toggle">🌙</button>
+  <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
   <h2>Registro de Tareas</h2>
-
-  <div class="modo-toggle mb-3">
-    <button data-vista="actual" class="active">Hoy</button>
-    <button data-vista="historial">Historial</button>
-    <button data-vista="horas">Horas</button>
-    <button data-vista="graficas">Gráficas</button>
+  
+  <div class="modo-toggle mb-3" role="tablist">
+    <button role="tab" aria-selected="true" data-vista="actual" class="active">Hoy</button>
+    <button role="tab" aria-selected="false" data-vista="historial">Historial</button>
+    <button role="tab" aria-selected="false" data-vista="horas">Horas</button>
+    <button role="tab" aria-selected="false" data-vista="graficas">Gráficas</button>
   </div>
-
-  <div id="vista-actual" class="vista-container active">
+  
+  <section id="vista-actual" class="vista-container active" role="tabpanel">
     <div class="input-group mb-3">
       <input
         type="number"
         id="nuevo-puesto-input"
         placeholder="Nº de puesto"
+        aria-label="Número de puesto"
       />
       <button id="add-puesto-btn">Añadir</button>
     </div>
@@ -35,41 +36,41 @@
     <h3 class="mt-4">Registro de Hoy</h3>
     <button id="clear-today-btn" class="danger">Limpiar Hoy</button>
     <div id="log-container"></div>
-  </div>
-
-  <div id="vista-historial" class="vista-container">
+  </section>
+  
+  <section id="vista-historial" class="vista-container" role="tabpanel" aria-hidden="true">
     <h3>Historial</h3>
-    <div class="hist-tabs">
-      <button data-sub="completo" class="active">Historial Completo</button>
-      <button data-sub="compact">Resumen por días</button>
+    <div class="hist-tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-sub="completo" class="active">Historial Completo</button>
+      <button role="tab" aria-selected="false" data-sub="compact">Resumen por días</button>
     </div>
-    <div id="hist-completo"></div>
-    <div id="hist-compact" style="display:none"></div>
-  </div>
-
-  <div id="vista-horas" class="vista-container">
+    <div id="hist-completo" role="tabpanel" aria-hidden="false"></div>
+    <div id="hist-compact" style="display:none" role="tabpanel" aria-hidden="true"></div>
+  </section>
+  
+  <section id="vista-horas" class="vista-container" role="tabpanel" aria-hidden="true">
     <h3>Distribución de Horas</h3>
-    <div class="horas-filtros">
-      <button data-rango="hoy" class="active">Hoy</button>
-      <button data-rango="ayer">Ayer</button>
-      <button data-rango="7dias">Últimos 7 días</button>
-      <button data-rango="mes">Mes actual</button>
+    <div class="horas-filtros" role="tablist">
+      <button role="tab" aria-selected="true" data-rango="hoy" class="active">Hoy</button>
+      <button role="tab" aria-selected="false" data-rango="ayer">Ayer</button>
+      <button role="tab" aria-selected="false" data-rango="7dias">Últimos 7 días</button>
+      <button role="tab" aria-selected="false" data-rango="mes">Mes actual</button>
     </div>
     <div id="horas-container"></div>
-  </div>
-
-  <div id="vista-graficas" class="vista-container">
+  </section>
+  
+  <section id="vista-graficas" class="vista-container" role="tabpanel" aria-hidden="true">
     <h3>Análisis de Productividad</h3>
-    <div class="filtros-graficas mb-3">
-      <button data-periodo="daily" class="active">Diario</button>
-      <button data-periodo="weekly">Semanal</button>
-      <button data-periodo="biweekly">Quincenal</button>
-      <button data-periodo="monthly">Mensual</button>
+    <div class="filtros-graficas mb-3" role="tablist">
+      <button role="tab" aria-selected="true" data-periodo="daily" class="active">Diario</button>
+      <button role="tab" aria-selected="false" data-periodo="weekly">Semanal</button>
+      <button role="tab" aria-selected="false" data-periodo="biweekly">Quincenal</button>
+      <button role="tab" aria-selected="false" data-periodo="monthly">Mensual</button>
     </div>
     <div style="height: 400px">
       <canvas id="grafico-puestos"></canvas>
     </div>
-  </div>
+  </section>
 
   <script src="app.js"></script>
 </body>
