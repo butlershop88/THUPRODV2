@@ -6,22 +6,14 @@ document.addEventListener('DOMContentLoaded', () => {
     tiempos: { 'Flejar+Paquete': 6, Paquete: 3, Bobina: 8, Cuna: 5 },
     coloresTareas: {
       'Flejar+Paquete': 'rgba(25, 135, 84, 0.8)', // verde para F+P
-      Paquete: '#FFA500', // naranja para P
-      Bobina: '#808080', // gris para B
-      Cuna: '#A52A2A', // marrón para C
+      'Paquete': 'rgba(255, 165, 0, 0.8)', // naranja para P
+      'Bobina': 'rgba(128, 128, 128, 0.8)', // gris para B
+      'Cuna': 'rgba(165, 42, 42, 0.8)', // marrón para C
     },
     coloresFijosPuestos: ['#FF4D4D', '#4DB3FF', '#6CFF6C', '#FFF04D'], // rojo, azul, verde y amarillo
     paletaFosforito: [
-      '#FFAA4D',
-      '#FF6FD8',
-      '#4DFFE5',
-      '#B6FF4D',
-      '#C77DFF',
-      '#4DFFC3',
-      '#FFFFFF',
-      '#FFD966',
-      '#A8E6CF',
-      '#FF8E99',
+      '#FFAA4D', '#FF6FD8', '#4DFFE5', '#B6FF4D', '#C77DFF', '#4DFFC3',
+      '#FFFFFF', '#FFD966', '#A8E6CF', '#FF8E99',
     ],
     JORNADA_MINUTOS: 465,
   };
@@ -78,10 +70,18 @@ document.addEventListener('DOMContentLoaded', () => {
     saveColorPuestos();
     return state.colorPuestos[puesto];
   }
+  
+  // Renderizado de TODA la UI principal
+  function renderAll() {
+    renderPuestos();
+    renderDashboard();
+    renderLog();
+  }
 
   // Renderizado de puestos
   function renderPuestos() {
-    document.getElementById('puestos-container').innerHTML = state.puestos
+    const container = document.getElementById('puestos-container');
+    container.innerHTML = state.puestos
       .map(
         (p) => `
       <div class="puesto" style="border-left: 5px solid ${getColorPuesto(p)}">
@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
     puestosOrdenados.forEach((p) => {
       table +=
         `<tr><td><span style="color:${getColorPuesto(p)}; font-weight:bold;">Puesto ${p}</span></td>` +
-        config.ordenTareas.map((t) => `<td>${contador[p][t]}</td>`).join('') +
+        config.ordenTareas.map((t) => `<td>${contador[p][t] || 0}</td>`).join('') +
         `<td>${contador[p].total}</td></tr>`;
     });
     document.getElementById('dashboard-container').innerHTML = table + '</tbody></table>';
@@ -396,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.puestos.push(num);
         state.puestos.sort((a, b) => parseInt(a) - parseInt(b));
         savePuestos();
-        renderPuestos();
+        renderAll(); // <-- LLAMADA A renderAll
       }
       input.value = '';
     });
@@ -422,13 +422,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = new Date();
         state.log.unshift({ id: Date.now(), puesto, tarea, fecha: now.toDateString(), hora: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) });
         saveLog();
-        renderAll();
+        renderAll(); // <-- LLAMADA A renderAll
       }
       if (target.classList.contains('quitar-puesto-btn')) {
         if (confirm(`¿Seguro que quieres quitar el puesto ${target.dataset.puesto}?`)) {
           state.puestos = state.puestos.filter((p) => p !== target.dataset.puesto);
           savePuestos();
-          renderPuestos();
+          renderAll(); // <-- LLAMADA A renderAll
         }
       }
       if (target.classList.contains('eliminar-log-btn')) {
