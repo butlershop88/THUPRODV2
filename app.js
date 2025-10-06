@@ -128,8 +128,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Renderizar resumen diario
   function renderDashboard() {
-    const hoyISO = yyyyMmDd(new Date());
-    const logHoy = state.log.filter((l) => l.fecha === getHoy());
+    const hoyISO = yyyyMmDd(new Date(state.jornadaActual));
+    const logHoy = state.log.filter((l) => l.fecha === state.jornadaActual);
     const contador = logHoy.reduce((acc, l) => {
       acc[l.puesto] = acc[l.puesto] || { total: 0, ...config.ordenTareas.reduce((a, t) => ({ ...a, [t]: 0 }), {}) };
       acc[l.puesto][l.tarea]++;
@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Renderizar log
   function renderLog() {
     document.getElementById('log-container').innerHTML = state.log
-      .filter((l) => l.fecha === getHoy())
+      .filter((l) => l.fecha === state.jornadaActual)
       .slice(0, 50)
       .map(
         (l) => `
@@ -437,8 +437,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('clear-today-btn').addEventListener('click', () => {
-      if (confirm('¿Seguro que quieres borrar todos los registros de hoy?')) {
-        state.log = state.log.filter((l) => l.fecha !== getHoy());
+      if (confirm('¿Seguro que quieres borrar todos los registros de la jornada actual (sin guardar)?')) {
+        state.log = state.log.filter((l) => l.fecha !== state.jornadaActual);
         saveLog();
         renderAll();
       }
@@ -449,6 +449,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Guardar resumen del día actual
         const hoyISO = yyyyMmDd(new Date(state.jornadaActual));
         const logHoy = state.log.filter((l) => l.fecha === state.jornadaActual);
+        
+        if (logHoy.length === 0) {
+          alert('No hay registros en la jornada actual.');
+          return;
+        }
+        
         const contador = logHoy.reduce((acc, l) => {
           acc[l.puesto] = acc[l.puesto] || { total: 0, ...config.ordenTareas.reduce((a, t) => ({ ...a, [t]: 0 }), {}) };
           acc[l.puesto][l.tarea]++;
@@ -472,11 +478,14 @@ document.addEventListener('DOMContentLoaded', () => {
           saveHoras(hoyISO, { fecha: hoyISO, asignacion });
         }
         
-        // Iniciar nueva jornada
-        state.jornadaActual = new Date().toISOString().split('T')[0];
+        // Iniciar nueva jornada (fecha actual real)
+        const nuevaFecha = new Date().toISOString().split('T')[0];
+        state.jornadaActual = nuevaFecha;
         saveJornada();
+        
+        // NO eliminamos el log histórico, solo actualizamos la vista
         renderAll();
-        alert('Jornada finalizada. Nueva jornada iniciada.');
+        alert(`Jornada ${hoyISO} finalizada. Nueva jornada ${nuevaFecha} iniciada.`);
       }
     });
 
@@ -514,12 +523,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // INICIALIZACION
   function init() {
-    if (localStorage.getItem('theme') === 'dark-mode') {
-      document.body.classList.add('dark-mode');
-      document.getElementById('theme-toggle').textContent = '☀️';
-    }
-    setupListeners();
-    renderAll();
-  }
-  init();
-});
