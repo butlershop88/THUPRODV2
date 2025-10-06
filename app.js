@@ -373,7 +373,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('.modo-toggle').addEventListener('click', (e) => {
       if (e.target.tagName === 'BUTTON') {
         const vista = e.target.dataset.vista;
-        document.querySelectorAll('.vista-container, .modo-toggle button').forEach((el) => el.classList.remove('active'));
+        document.querySelectorAll('.vista-container').forEach((el) => el.classList.remove('active'));
+        document.querySelectorAll('.modo-toggle button').forEach((el) => el.classList.remove('active'));
         document.getElementById(`vista-${vista}`).classList.add('active');
         e.target.classList.add('active');
 
@@ -523,3 +524,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // INICIALIZACION
   function init() {
+    if (localStorage.getItem('theme') === 'dark-mode') {
+      document.body.classList.add('dark-mode');
+      document.getElementById('theme-toggle').textContent = '☀️';
+    }
+    setupListeners();
+    renderAll();
+  }
+  init();
+});
