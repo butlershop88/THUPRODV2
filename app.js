@@ -10,10 +10,20 @@ document.addEventListener('DOMContentLoaded', () => {
       'Bobina': 'rgba(128, 128, 128, 0.8)', // gris para B
       'Cuna': 'rgba(165, 42, 42, 0.8)', // marrón para C
     },
-    coloresFijosPuestos: ['#FF4D4D', '#4DB3FF', '#6CFF6C', '#FFF04D'], // rojo, azul, verde y amarillo
-    paletaFosforito: [
-      '#FFAA4D', '#FF6FD8', '#4DFFE5', '#B6FF4D', '#C77DFF', '#4DFFC3',
-      '#FFFFFF', '#FFD966', '#A8E6CF', '#FF8E99',
+    coloresFijosPuestos: {
+      '23': '#FF4D4D',      // rojo
+      '24': '#4DB3FF',      // azul
+      '11': '#FFF04D',      // amarillo
+      '15': '#6CFF6C',      // verde
+    },
+    paletaSecundaria: [
+      '#FFA500',   // naranja
+      '#FF69B4',   // rosa
+      '#FFFFFF',   // blanco (modo noche) / negro (modo día)
+      '#9370DB',   // lila
+      '#87CEEB',   // azul celeste
+      '#7FFFD4',   // verde celeste (aquamarine)
+      '#FFB366',   // naranja celeste
     ],
     JORNADA_MINUTOS: 465,
   };
@@ -24,13 +34,15 @@ document.addEventListener('DOMContentLoaded', () => {
     log: JSON.parse(localStorage.getItem('registroTareas') || '[]'),
     colorPuestos: JSON.parse(localStorage.getItem('colorPuestos') || '{}'),
     chartInstance: null,
+    jornadaActual: localStorage.getItem('jornadaActual') || new Date().toISOString().split('T')[0],
   };
 
   // Funciones de guardado
   const savePuestos = () => localStorage.setItem('puestos', JSON.stringify(state.puestos));
   const saveLog = () => localStorage.setItem('registroTareas', JSON.stringify(state.log));
   const saveColorPuestos = () => localStorage.setItem('colorPuestos', JSON.stringify(state.colorPuestos));
-  const getHoy = () => new Date().toDateString();
+  const saveJornada = () => localStorage.setItem('jornadaActual', state.jornadaActual);
+  const getHoy = () => state.jornadaActual;
 
   // Funciones auxiliares para fechas
   function yyyyMmDd(dateObj) {
@@ -52,21 +64,36 @@ document.addEventListener('DOMContentLoaded', () => {
     return raw ? JSON.parse(raw) : null;
   }
 
-  // Función para obtener colores fosforitos para puestos
+  // Función para obtener colores para puestos
   function getColorPuesto(puesto) {
     if (state.colorPuestos[puesto]) return state.colorPuestos[puesto];
-    const index = state.puestos.indexOf(puesto);
-    if (index >= 0 && index < config.coloresFijosPuestos.length) {
-      state.colorPuestos[puesto] = config.coloresFijosPuestos[index];
-    } else {
-      let hash = 0;
-      for (let i = 0; i < puesto.length; i++) {
-        hash = puesto.charCodeAt(i) + ((hash << 5) - hash);
-        hash = hash & hash;
-      }
-      const paletaIndex = Math.abs(hash) % config.paletaFosforito.length;
-      state.colorPuestos[puesto] = config.paletaFosforito[paletaIndex];
+    
+    // Colores fijos para puestos específicos
+    if (config.coloresFijosPuestos[puesto]) {
+      state.colorPuestos[puesto] = config.coloresFijosPuestos[puesto];
+      saveColorPuestos();
+      return state.colorPuestos[puesto];
     }
+    
+    // Para otros puestos, usar paleta secundaria cíclicamente
+    const puestosNoFijos = state.puestos.filter(p => !config.coloresFijosPuestos[p]);
+    const index = puestosNoFijos.indexOf(puesto);
+    
+    if (index >= 0) {
+      let color = config.paletaSecundaria[index % config.paletaSecundaria.length];
+      
+      // Ajustar blanco/negro según modo oscuro
+      if (color === '#FFFFFF' && !document.body.classList.contains('dark-mode')) {
+        color = '#000000';
+      }
+      
+      state.colorPuestos[puesto] = color;
+      saveColorPuestos();
+      return color;
+    }
+    
+    // Fallback
+    state.colorPuestos[puesto] = '#CCCCCC';
     saveColorPuestos();
     return state.colorPuestos[puesto];
   }
@@ -417,12 +444,56 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    document.getElementById('finalizar-jornada-btn').addEventListener('click', () => {
+      if (confirm('¿Finalizar jornada actual y empezar una nueva?')) {
+        // Guardar resumen del día actual
+        const hoyISO = yyyyMmDd(new Date(state.jornadaActual));
+        const logHoy = state.log.filter((l) => l.fecha === state.jornadaActual);
+        const contador = logHoy.reduce((acc, l) => {
+          acc[l.puesto] = acc[l.puesto] || { total: 0, ...config.ordenTareas.reduce((a, t) => ({ ...a, [t]: 0 }), {}) };
+          acc[l.puesto][l.tarea]++;
+          acc[l.puesto].total++;
+          return acc;
+        }, {});
+        saveResumen(hoyISO, { fecha: hoyISO, data: contador });
+        
+        // Calcular y guardar horas
+        const esfuerzo = logHoy.reduce((acc, l) => {
+          acc[l.puesto] = (acc[l.puesto] || 0) + (config.tiempos[l.tarea] || 0);
+          return acc;
+        }, {});
+        const totalEsfuerzo = Object.values(esfuerzo).reduce((s, v) => s + v, 0);
+        if (totalEsfuerzo > 0) {
+          const asignacion = {};
+          Object.keys(esfuerzo).forEach(p => {
+            const minutos = (esfuerzo[p] / totalEsfuerzo) * config.JORNADA_MINUTOS;
+            asignacion[p] = { minutos, horasDecimal: minutos / 60 };
+          });
+          saveHoras(hoyISO, { fecha: hoyISO, asignacion });
+        }
+        
+        // Iniciar nueva jornada
+        state.jornadaActual = new Date().toISOString().split('T')[0];
+        saveJornada();
+        renderAll();
+        alert('Jornada finalizada. Nueva jornada iniciada.');
+      }
+    });
+
+    document.getElementById('reset-colors-btn').addEventListener('click', () => {
+      if (confirm('¿Resetear todos los colores de puestos?')) {
+        state.colorPuestos = {};
+        saveColorPuestos();
+        renderAll();
+      }
+    });
+
     document.body.addEventListener('click', (e) => {
       const target = e.target;
       if (target.classList.contains('add-tarea-btn')) {
         const { puesto, tarea } = target.dataset;
         const now = new Date();
-        state.log.unshift({ id: Date.now(), puesto, tarea, fecha: now.toDateString(), hora: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) });
+        state.log.unshift({ id: Date.now(), puesto, tarea, fecha: state.jornadaActual, hora: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) });
         saveLog();
         renderAll(); // <-- LLAMADA A renderAll
       }
