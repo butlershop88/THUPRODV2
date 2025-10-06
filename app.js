@@ -174,7 +174,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Render Historial Completo
   function renderHistorialCompleto() {
     const cont = document.getElementById('hist-completo');
-    const logAgrupado = state.log.reduce((acc, l) => {
+    const historialCompleto = JSON.parse(localStorage.getItem('historialCompleto') || '[]');
+    const logAgrupado = historialCompleto.reduce((acc, l) => {
       if (!acc[l.fecha]) acc[l.fecha] = [];
       acc[l.fecha].push(l);
       return acc;
@@ -203,7 +204,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Render Historial Compacto
   function renderHistorialCompact() {
     const cont = document.getElementById('hist-compact');
-    const fechasSet = new Set(state.log.map((l) => yyyyMmDd(new Date(l.fecha))));
+    const historialCompleto = JSON.parse(localStorage.getItem('historialCompleto') || '[]');
+    const fechasSet = new Set(historialCompleto.map((l) => yyyyMmDd(new Date(l.fecha))));
     const fechas = Array.from(fechasSet).sort((a, b) => new Date(b) - new Date(a));
     if (fechas.length === 0) {
       cont.innerHTML = '<p>No hay datos para mostrar.</p>';
@@ -214,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let resumen = loadResumen(fechaISO);
         if (!resumen) {
           const fechaStr = new Date(fechaISO).toDateString();
-          const delDia = state.log.filter((l) => l.fecha === fechaStr);
+          const delDia = historialCompleto.filter((l) => l.fecha === fechaStr);
           const contador = delDia.reduce((acc, l) => {
             acc[l.puesto] = acc[l.puesto] || { total: 0, ...config.ordenTareas.reduce((a, t) => ({ ...a, [t]: 0 }), {}) };
             acc[l.puesto][l.tarea]++;
@@ -309,6 +311,66 @@ document.addEventListener('DOMContentLoaded', () => {
 
     cont.innerHTML = `<div class="puesto"><h4>Distribución para Hoy</h4>${tabla}</div>`;
 }
+
+  // MANEJO DE LA JORNADA
+  function finalizarJornada() {
+    if (!confirm('¿Finalizar jornada actual y empezar una nueva?')) {
+      return;
+    }
+
+    const hoyISO = yyyyMmDd(new Date(state.jornadaActual));
+    const logHoy = state.log.filter((l) => l.fecha === state.jornadaActual);
+
+    if (logHoy.length === 0) {
+      alert('No hay registros en la jornada actual.');
+      return;
+    }
+
+    // 1. Guardar Resumen del Día
+    const contador = logHoy.reduce((acc, l) => {
+      acc[l.puesto] = acc[l.puesto] || { total: 0, ...config.ordenTareas.reduce((a, t) => ({ ...a, [t]: 0 }), {}) };
+      acc[l.puesto][l.tarea]++;
+      acc[l.puesto].total++;
+      return acc;
+    }, {});
+    saveResumen(hoyISO, { fecha: hoyISO, data: contador });
+
+    // 2. Calcular y Guardar Horas
+    const esfuerzo = logHoy.reduce((acc, l) => {
+      acc[l.puesto] = (acc[l.puesto] || 0) + (config.tiempos[l.tarea] || 0);
+      return acc;
+    }, {});
+    const totalEsfuerzo = Object.values(esfuerzo).reduce((s, v) => s + v, 0);
+    if (totalEsfuerzo > 0) {
+      const asignacion = {};
+      Object.keys(esfuerzo).forEach(p => {
+        const minutos = (esfuerzo[p] / totalEsfuerzo) * config.JORNADA_MINUTOS;
+        asignacion[p] = { minutos, horasDecimal: minutos / 60 };
+      });
+      saveHoras(hoyISO, { fecha: hoyISO, asignacion });
+    }
+
+    // 3. (Opcional pero recomendado) Mover registros de la jornada a un historial general
+    // y limpiar el log principal. Esto evita que el `state.log` crezca indefinidamente.
+    let historialCompleto = JSON.parse(localStorage.getItem('historialCompleto') || '[]');
+    historialCompleto.push(...logHoy);
+    localStorage.setItem('historialCompleto', JSON.stringify(historialCompleto));
+
+    // Limpiar los registros de la jornada actual del log principal
+    state.log = state.log.filter((l) => l.fecha !== state.jornadaActual);
+    saveLog();
+
+
+    // 4. Iniciar Nueva Jornada
+    const nuevaFecha = new Date().toISOString().split('T')[0];
+    state.jornadaActual = nuevaFecha;
+    saveJornada();
+
+    // 5. Actualizar UI y notificar
+    renderAll();
+    alert(`Jornada ${hoyISO} finalizada y guardada en el historial. Nueva jornada ${nuevaFecha} iniciada.`);
+  }
+
 
   // Render Grafico
   function renderGraficas(periodo) {
@@ -445,50 +507,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    document.getElementById('finalizar-jornada-btn').addEventListener('click', () => {
-      if (confirm('¿Finalizar jornada actual y empezar una nueva?')) {
-        // Guardar resumen del día actual
-        const hoyISO = yyyyMmDd(new Date(state.jornadaActual));
-        const logHoy = state.log.filter((l) => l.fecha === state.jornadaActual);
-        
-        if (logHoy.length === 0) {
-          alert('No hay registros en la jornada actual.');
-          return;
-        }
-        
-        const contador = logHoy.reduce((acc, l) => {
-          acc[l.puesto] = acc[l.puesto] || { total: 0, ...config.ordenTareas.reduce((a, t) => ({ ...a, [t]: 0 }), {}) };
-          acc[l.puesto][l.tarea]++;
-          acc[l.puesto].total++;
-          return acc;
-        }, {});
-        saveResumen(hoyISO, { fecha: hoyISO, data: contador });
-        
-        // Calcular y guardar horas
-        const esfuerzo = logHoy.reduce((acc, l) => {
-          acc[l.puesto] = (acc[l.puesto] || 0) + (config.tiempos[l.tarea] || 0);
-          return acc;
-        }, {});
-        const totalEsfuerzo = Object.values(esfuerzo).reduce((s, v) => s + v, 0);
-        if (totalEsfuerzo > 0) {
-          const asignacion = {};
-          Object.keys(esfuerzo).forEach(p => {
-            const minutos = (esfuerzo[p] / totalEsfuerzo) * config.JORNADA_MINUTOS;
-            asignacion[p] = { minutos, horasDecimal: minutos / 60 };
-          });
-          saveHoras(hoyISO, { fecha: hoyISO, asignacion });
-        }
-        
-        // Iniciar nueva jornada (fecha actual real)
-        const nuevaFecha = new Date().toISOString().split('T')[0];
-        state.jornadaActual = nuevaFecha;
-        saveJornada();
-        
-        // NO eliminamos el log histórico, solo actualizamos la vista
-        renderAll();
-        alert(`Jornada ${hoyISO} finalizada. Nueva jornada ${nuevaFecha} iniciada.`);
-      }
-    });
+        document.getElementById('finalizar-jornada-btn').addEventListener('click', finalizarJornada);
 
     document.getElementById('reset-colors-btn').addEventListener('click', () => {
       if (confirm('¿Resetear todos los colores de puestos?')) {
