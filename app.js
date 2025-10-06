@@ -97,6 +97,16 @@ document.addEventListener('DOMContentLoaded', () => {
     saveColorPuestos();
     return state.colorPuestos[puesto];
   }
+
+  // Función para mostrar pop-up
+  function showPopup(message) {
+    const popup = document.getElementById('popup');
+    popup.textContent = message;
+    popup.classList.add('show');
+    setTimeout(() => {
+      popup.classList.remove('show');
+    }, 2000);
+  }
   
   // Renderizado de TODA la UI principal
   function renderAll() {
@@ -207,12 +217,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const historialCompleto = JSON.parse(localStorage.getItem('historialCompleto') || '[]');
     const fechasSet = new Set(historialCompleto.map((l) => yyyyMmDd(new Date(l.fecha))));
     const fechas = Array.from(fechasSet).sort((a, b) => new Date(b) - new Date(a));
+
     if (fechas.length === 0) {
       cont.innerHTML = '<p>No hay datos para mostrar.</p>';
       return;
     }
+
     cont.innerHTML = fechas
       .map((fechaISO) => {
+        // Cargar resumen de tareas
         let resumen = loadResumen(fechaISO);
         if (!resumen) {
           const fechaStr = new Date(fechaISO).toDateString();
@@ -226,19 +239,39 @@ document.addEventListener('DOMContentLoaded', () => {
           resumen = { fecha: fechaISO, data: contador };
           saveResumen(fechaISO, resumen);
         }
+
+        // Cargar datos de horas
+        const horas = loadHoras(fechaISO);
+
         const titulo = new Date(fechaISO).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
         const puestosOrdenados = Object.keys(resumen.data).sort((a, b) => resumen.data[b].total - resumen.data[a].total);
-        let table =
+
+        // Tabla de Resumen de Tareas
+        let tablaResumen =
           '<table class="tabla-resumen"><thead><tr><th>Puesto</th>' +
           config.ordenTareas.map((t) => `<th>${config.abrev[t]}</th>`).join('') +
           '<th>Total</th></tr></thead><tbody>';
         puestosOrdenados.forEach((p) => {
-          table += `<tr><td><span style="color:${getColorPuesto(p)}; font-weight:bold;">Puesto ${p}</span></td>`;
-          config.ordenTareas.forEach((t) => (table += `<td>${resumen.data[p][t] || 0}</td>`));
-          table += `<td>${resumen.data[p].total || 0}</td></tr>`;
+          tablaResumen += `<tr><td><span style="color:${getColorPuesto(p)}; font-weight:bold;">Puesto ${p}</span></td>`;
+          config.ordenTareas.forEach((t) => (tablaResumen += `<td>${resumen.data[p][t] || 0}</td>`));
+          tablaResumen += `<td>${resumen.data[p].total || 0}</td></tr>`;
         });
-        table += '</tbody></table>';
-        return `<div class="puesto"><h4>${titulo}</h4>${table}</div>`;
+        tablaResumen += '</tbody></table>';
+
+        // Tabla de Distribución de Horas
+        let tablaHoras = '';
+        if (horas && horas.asignacion) {
+          tablaHoras = '<h5 class="mt-3">Distribución de Horas</h5><table class="tabla-resumen"><thead><tr><th>Puesto</th><th>Tiempo Asignado</th><th>Decimal</th></tr></thead><tbody>';
+          Object.keys(horas.asignacion)
+            .sort((a, b) => horas.asignacion[b].minutos - horas.asignacion[a].minutos)
+            .forEach(p => {
+              const { minutos, horasDecimal } = horas.asignacion[p];
+              tablaHoras += `<tr><td><strong style="color:${getColorPuesto(p)};">P${p}</strong></td><td>${Math.floor(minutos / 60)}h ${Math.round(minutos % 60)}min</td><td>${horasDecimal.toFixed(2)}</td></tr>`;
+            });
+          tablaHoras += '</tbody></table>';
+        }
+
+        return `<div class="puesto"><h4>${titulo}</h4>${tablaResumen}${tablaHoras}</div>`;
       })
       .join('');
   }
@@ -525,6 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.log.unshift({ id: Date.now(), puesto, tarea, fecha: state.jornadaActual, hora: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) });
         saveLog();
         renderAll(); // <-- LLAMADA A renderAll
+        showPopup('Registro añadido con éxito');
       }
       if (target.classList.contains('quitar-puesto-btn')) {
         if (confirm(`¿Seguro que quieres quitar el puesto ${target.dataset.puesto}?`)) {
