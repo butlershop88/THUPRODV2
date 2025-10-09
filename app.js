@@ -211,6 +211,29 @@ document.addEventListener('DOMContentLoaded', () => {
       .join('');
   }
 
+  // Función para eliminar un día completo del historial
+  function eliminarDiaHistorial(fechaISO) {
+    if (!confirm(`¿Seguro que quieres eliminar todos los registros del día ${new Date(fechaISO).toLocaleDateString('es-ES')}?`)) {
+      return;
+    }
+
+    // Eliminar del historial completo
+    let historialCompleto = JSON.parse(localStorage.getItem('historialCompleto') || '[]');
+    const fechaStr = new Date(fechaISO).toDateString();
+    historialCompleto = historialCompleto.filter(l => l.fecha !== fechaStr);
+    localStorage.setItem('historialCompleto', JSON.stringify(historialCompleto));
+
+    // Eliminar resumen guardado
+    localStorage.removeItem(`resumen:${fechaISO}`);
+
+    // Eliminar horas guardadas
+    localStorage.removeItem(`horas:${fechaISO}`);
+
+    // Re-renderizar vista
+    renderHistorialCompact();
+    showPopup('Día eliminado del historial');
+  }
+
   // Render Historial Compacto
   function renderHistorialCompact() {
     const cont = document.getElementById('hist-compact');
@@ -271,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
           tablaHoras += '</tbody></table>';
         }
 
-        return `<div class="puesto"><h4>${titulo}</h4>${tablaResumen}${tablaHoras}</div>`;
+        return `<div class="puesto"><div class="puesto-header"><h4 style="margin:0;">${titulo}</h4><button class="eliminar-dia-btn" data-fecha="${fechaISO}" aria-label="Eliminar día">🗑️</button></div>${tablaResumen}${tablaHoras}</div>`;
       })
       .join('');
   }
@@ -571,6 +594,9 @@ document.addEventListener('DOMContentLoaded', () => {
         state.log = state.log.filter((l) => l.id !== parseInt(target.dataset.id));
         saveLog();
         renderAll();
+      }
+      if (target.classList.contains('eliminar-dia-btn')) {
+        eliminarDiaHistorial(target.dataset.fecha);
       }
     });
   }
