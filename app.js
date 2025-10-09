@@ -198,10 +198,11 @@ document.addEventListener('DOMContentLoaded', () => {
     cont.innerHTML = fechas
       .map((f) => {
         const fechaFormateada = new Date(f).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+        const fechaISO = yyyyMmDd(new Date(f));
         return (
-          '<div class="puesto"><h4>' +
+          '<div class="puesto"><div class="puesto-header"><h4 style="margin:0;">' +
           fechaFormateada +
-          '</h4>' +
+          '</h4><button class="eliminar-dia-completo-btn" data-fecha="' + fechaISO + '" aria-label="Eliminar día">🗑️</button></div>' +
           logAgrupado[f]
             .map((l) => `<div><strong style="color:${getColorPuesto(l.puesto)};">Puesto ${l.puesto}</strong> - ${l.hora} - ${config.abrev[l.tarea]}</div>`)
             .join('') +
@@ -598,17 +599,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if (target.classList.contains('eliminar-dia-btn')) {
         eliminarDiaHistorial(target.dataset.fecha);
       }
+      if (target.classList.contains('eliminar-dia-completo-btn')) {
+        eliminarDiaHistorial(target.dataset.fecha);
+        // Actualizar también historial completo si está visible
+        if (document.getElementById('hist-completo').style.display !== 'none') {
+          renderHistorialCompleto();
+        }
+      }
     });
   }
 
   // INICIALIZACION
   function init() {
     if (localStorage.getItem('theme') === 'dark-mode') {
-      document.body.classList.add('dark-mode');
-      document.getElementById('theme-toggle').textContent = '☀️';
-    }
-    setupListeners();
-    renderAll();
-  }
-  init();
-});
