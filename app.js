@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
       '#7FFFD4',   // verde celeste (aquamarine)
       '#FFB366',   // naranja celeste
     ],
-    JORNADA_MINUTOS: 465,
+    JORNADA_MINUTOS: parseInt(localStorage.getItem('jornadaMinutos') || '465'),
   };
 
   // Estado general
@@ -38,10 +38,38 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Funciones de guardado
-  const savePuestos = () => localStorage.setItem('puestos', JSON.stringify(state.puestos));
-  const saveLog = () => localStorage.setItem('registroTareas', JSON.stringify(state.log));
-  const saveColorPuestos = () => localStorage.setItem('colorPuestos', JSON.stringify(state.colorPuestos));
-  const saveJornada = () => localStorage.setItem('jornadaActual', state.jornadaActual);
+  const savePuestos = () => {
+    try {
+      localStorage.setItem('puestos', JSON.stringify(state.puestos));
+    } catch (e) {
+      console.error('Error saving puestos to localStorage', e);
+      showPopup('Error al guardar los puestos. El almacenamiento puede estar lleno.');
+    }
+  };
+  const saveLog = () => {
+    try {
+      localStorage.setItem('registroTareas', JSON.stringify(state.log));
+    } catch (e) {
+      console.error('Error saving log to localStorage', e);
+      showPopup('Error al guardar el registro. El almacenamiento puede estar lleno.');
+    }
+  };
+  const saveColorPuestos = () => {
+    try {
+      localStorage.setItem('colorPuestos', JSON.stringify(state.colorPuestos));
+    } catch (e) {
+      console.error('Error saving colorPuestos to localStorage', e);
+      showPopup('Error al guardar los colores de los puestos. El almacenamiento puede estar lleno.');
+    }
+  };
+  const saveJornada = () => {
+    try {
+      localStorage.setItem('jornadaActual', state.jornadaActual);
+    } catch (e) {
+      console.error('Error saving jornada to localStorage', e);
+      showPopup('Error al guardar la jornada. El almacenamiento puede estar lleno.');
+    }
+  };
   const getHoy = () => state.jornadaActual;
 
   // Funciones auxiliares para fechas
@@ -50,18 +78,40 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
   function saveResumen(fechaISO, resumenData) {
-    localStorage.setItem(`resumen:${fechaISO}`, JSON.stringify(resumenData));
+    try {
+      localStorage.setItem(`resumen:${fechaISO}`, JSON.stringify(resumenData));
+    } catch (e) {
+      console.error('Error saving resumen to localStorage', e);
+      showPopup('Error al guardar el resumen. El almacenamiento puede estar lleno.');
+    }
   }
   function loadResumen(fechaISO) {
-    const raw = localStorage.getItem(`resumen:${fechaISO}`);
-    return raw ? JSON.parse(raw) : null;
+    try {
+      const raw = localStorage.getItem(`resumen:${fechaISO}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      console.error('Error loading resumen from localStorage', e);
+      showPopup('Error al cargar el resumen.');
+      return null;
+    }
   }
   function saveHoras(fechaISO, horasData) {
-    localStorage.setItem(`horas:${fechaISO}`, JSON.stringify(horasData));
+    try {
+      localStorage.setItem(`horas:${fechaISO}`, JSON.stringify(horasData));
+    } catch (e) {
+      console.error('Error saving horas to localStorage', e);
+      showPopup('Error al guardar las horas. El almacenamiento puede estar lleno.');
+    }
   }
   function loadHoras(fechaISO) {
-    const raw = localStorage.getItem(`horas:${fechaISO}`);
-    return raw ? JSON.parse(raw) : null;
+    try {
+      const raw = localStorage.getItem(`horas:${fechaISO}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      console.error('Error loading horas from localStorage', e);
+      showPopup('Error al cargar las horas.');
+      return null;
+    }
   }
 
   // Función para obtener colores para puestos
@@ -181,6 +231,11 @@ document.addEventListener('DOMContentLoaded', () => {
       .join('');
   }
 
+  // Renderizar solo el log
+  function renderLogOnly() {
+    renderLog();
+  }
+
   // Render Historial Completo
   function renderHistorialCompleto() {
     const cont = document.getElementById('hist-completo');
@@ -220,8 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Eliminar del historial completo
     let historialCompleto = JSON.parse(localStorage.getItem('historialCompleto') || '[]');
-    const fechaStr = new Date(fechaISO).toDateString();
-    historialCompleto = historialCompleto.filter(l => l.fecha !== fechaStr);
+    historialCompleto = historialCompleto.filter(l => yyyyMmDd(new Date(l.fecha)) !== fechaISO);
     localStorage.setItem('historialCompleto', JSON.stringify(historialCompleto));
 
     // Eliminar resumen guardado
@@ -252,8 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Cargar resumen de tareas
         let resumen = loadResumen(fechaISO);
         if (!resumen) {
-          const fechaStr = new Date(fechaISO).toDateString();
-          const delDia = historialCompleto.filter((l) => l.fecha === fechaStr);
+          const delDia = historialCompleto.filter((l) => yyyyMmDd(new Date(l.fecha)) === fechaISO);
           const contador = delDia.reduce((acc, l) => {
             acc[l.puesto] = acc[l.puesto] || { total: 0, ...config.ordenTareas.reduce((a, t) => ({ ...a, [t]: 0 }), {}) };
             acc[l.puesto][l.tarea]++;
@@ -322,20 +375,19 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderDistribucionHoras(rango = 'hoy') {
     const cont = document.getElementById('horas-container');
 
-    // Forzar el rango a 'hoy' para esta pestaña
-    const { start, end } = fechasDeRango('hoy');
+    const { start, end } = fechasDeRango(rango);
 
-    const logHoy = state.log.filter(l => {
+    const logFiltrado = state.log.filter(l => {
         const d = new Date(l.fecha);
         return d >= start && d <= end;
     });
 
-    if (logHoy.length === 0) {
-        cont.innerHTML = '<p>No hay datos para hoy.</p>';
+    if (logFiltrado.length === 0) {
+        cont.innerHTML = '<p>No hay datos para el rango seleccionado.</p>';
         return;
     }
 
-    const esfuerzo = logHoy.reduce((acc, l) => {
+    const esfuerzo = logFiltrado.reduce((acc, l) => {
         acc[l.puesto] = (acc[l.puesto] || 0) + (config.tiempos[l.tarea] || 0);
         return acc;
     }, {});
@@ -343,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const totalEsfuerzo = Object.values(esfuerzo).reduce((s, v) => s + v, 0);
 
     if (totalEsfuerzo === 0) {
-        cont.innerHTML = '<p>No hay tareas con tiempo asignado para hoy.</p>';
+        cont.innerHTML = '<p>No hay tareas con tiempo asignado para el rango seleccionado.</p>';
         return;
     }
 
@@ -353,9 +405,12 @@ document.addEventListener('DOMContentLoaded', () => {
         asignacion[p] = { minutos, horasDecimal: minutos / 60 };
     });
 
-    const hoyISO = yyyyMmDd(new Date());
+    const hoyISO = yyyyMmDd(new Date()); // Esto debería ser la fecha actual para guardar, no la del rango
     const horasData = { fecha: hoyISO, asignacion };
-    saveHoras(hoyISO, horasData);
+    // Solo guardar si el rango es 'hoy' para evitar sobrescribir datos de días pasados
+    if (rango === 'hoy') {
+      saveHoras(hoyISO, horasData);
+    }
 
     let tabla = '<table class="tabla-resumen"><thead><tr><th>Puesto</th><th>Tiempo Asignado</th><th>Decimal</th></tr></thead><tbody>';
     Object.keys(asignacion)
@@ -366,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     tabla += '</tbody></table>';
 
-    cont.innerHTML = `<div class="puesto"><h4>Distribución para Hoy</h4>${tabla}</div>`;
+    cont.innerHTML = `<div class="puesto"><h4>Distribución para ${rango === 'hoy' ? 'Hoy' : rango === 'ayer' ? 'Ayer' : rango === '7dias' ? 'Últimos 7 días' : 'Mes actual'}</h4>${tabla}</div>`;
 }
 
   // MANEJO DE LA JORNADA
@@ -411,7 +466,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // y limpiar el log principal. Esto evita que el `state.log` crezca indefinidamente.
     let historialCompleto = JSON.parse(localStorage.getItem('historialCompleto') || '[]');
     historialCompleto.push(...logHoy);
-    localStorage.setItem('historialCompleto', JSON.stringify(historialCompleto));
+    try {
+      localStorage.setItem('historialCompleto', JSON.stringify(historialCompleto));
+    } catch (e) {
+      console.error('Error saving historialCompleto to localStorage', e);
+      showPopup('Error al guardar el historial completo. El almacenamiento puede estar lleno.');
+    }
 
     // Limpiar los registros de la jornada actual del log principal
     state.log = state.log.filter((l) => l.fecha !== state.jornadaActual);
@@ -419,13 +479,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // 4. Iniciar Nueva Jornada
-    const nuevaFecha = new Date().toISOString().split('T')[0];
-    state.jornadaActual = nuevaFecha;
+    const fechaJornadaFinalizada = state.jornadaActual;
+    const nuevaFecha = new Date();
+    nuevaFecha.setDate(new Date(fechaJornadaFinalizada).getDate() + 1);
+    state.jornadaActual = nuevaFecha.toISOString().split('T')[0];
     saveJornada();
 
     // 5. Actualizar UI y notificar
     renderAll();
-    alert(`Jornada ${hoyISO} finalizada y guardada en el historial. Nueva jornada ${nuevaFecha} iniciada.`);
+    alert(`Jornada ${fechaJornadaFinalizada} finalizada y guardada en el historial. Nueva jornada ${state.jornadaActual} iniciada.`);
   }
 
 
@@ -448,10 +510,11 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
     }
 
-    const logFiltrado =
-      periodo === 'daily' ? state.log.filter((l) => l.fecha === getHoy()) : state.log.filter((l) => new Date(l.fecha) >= fechaInicio);
+    const logParaGraficar = (periodo === 'daily')
+      ? state.log.filter((l) => l.fecha === getHoy())
+      : JSON.parse(localStorage.getItem('historialCompleto') || '[]').filter((l) => new Date(l.fecha) >= fechaInicio);
 
-    const contador = logFiltrado.reduce((acc, l) => {
+    const contador = logParaGraficar.reduce((acc, l) => {
       acc[l.puesto] = acc[l.puesto] || { ...config.ordenTareas.reduce((a, t) => ({ ...a, [t]: 0 }), {}), total: 0 };
       acc[l.puesto][l.tarea]++;
       acc[l.puesto].total++;
@@ -499,14 +562,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (vista === 'historial') {
           renderHistorialCompleto();
-        }
-        if (vista === 'horas') {
+        } else if (vista === 'horas') {
           renderDistribucionHoras('hoy');
-        }
-        if (vista === 'graficas') {
+        } else if (vista === 'graficas') {
           renderGraficas('daily');
-        }
-      }
+        } else if (vista === 'actual') {
+          renderAll();
+        }      }
     });
 
     document.querySelector('.hist-tabs').addEventListener('click', (e) => {
@@ -535,6 +597,18 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.filtros-graficas button').forEach((b) => b.classList.remove('active'));
         e.target.classList.add('active');
         renderGraficas(e.target.dataset.periodo);
+      }
+    });
+
+    document.getElementById('jornada-minutos-input').value = config.JORNADA_MINUTOS;
+    document.getElementById('jornada-minutos-input').addEventListener('change', (e) => {
+      const value = parseInt(e.target.value);
+      if (!isNaN(value) && value > 0) {
+        config.JORNADA_MINUTOS = value;
+        localStorage.setItem('jornadaMinutos', value);
+        renderDistribucionHoras('hoy');
+      } else {
+        e.target.value = config.JORNADA_MINUTOS;
       }
     });
 
@@ -581,20 +655,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = new Date();
         state.log.unshift({ id: Date.now(), puesto, tarea, fecha: state.jornadaActual, hora: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) });
         saveLog();
-        renderAll(); // <-- LLAMADA A renderAll
+        renderDashboard();
+        renderLog();
         showPopup('Registro añadido con éxito');
       }
       if (target.classList.contains('quitar-puesto-btn')) {
         if (confirm(`¿Seguro que quieres quitar el puesto ${target.dataset.puesto}?`)) {
           state.puestos = state.puestos.filter((p) => p !== target.dataset.puesto);
           savePuestos();
-          renderAll(); // <-- LLAMADA A renderAll
+          renderPuestos();
+          renderDashboard();
         }
       }
       if (target.classList.contains('eliminar-log-btn')) {
         state.log = state.log.filter((l) => l.id !== parseInt(target.dataset.id));
         saveLog();
-        renderAll();
+        renderDashboard();
+        renderLog();
       }
       if (target.classList.contains('eliminar-dia-btn')) {
         eliminarDiaHistorial(target.dataset.fecha);
@@ -612,3 +689,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // INICIALIZACION
   function init() {
     if (localStorage.getItem('theme') === 'dark-mode') {
+      document.body.classList.add('dark-mode');
+      document.getElementById('theme-toggle').textContent = '☀️';
+    }
+    setupListeners();
+    renderAll();
+  }
+  init();
+});
