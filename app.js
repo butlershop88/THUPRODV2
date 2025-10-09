@@ -541,94 +541,153 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function handleResetColorsClick() {
+    if (confirm('¿Resetear todos los colores de puestos?')) {
+      state.colorPuestos = {};
+      saveColorPuestos();
+      renderAll();
+    }
+  }
+
+  function handleClearTodayClick() {
+    if (confirm('¿Seguro que quieres borrar todos los registros de la jornada actual (sin guardar)?')) {
+      state.log = state.log.filter((l) => l.fecha !== state.jornadaActual);
+      saveLog();
+      renderAll();
+    }
+  }
+
+  function handleNuevoPuestoKeypress(e) {
+    if (e.key === 'Enter') {
+      document.getElementById('add-puesto-btn').click();
+    }
+  }
+
+  function handleJornadaMinutosChange(e) {
+    const value = parseInt(e.target.value);
+    if (!isNaN(value) && value > 0) {
+      config.JORNADA_MINUTOS = value;
+      localStorage.setItem('jornadaMinutos', value);
+      renderDistribucionHoras('hoy');
+    } else {
+      e.target.value = config.JORNADA_MINUTOS;
+    }
+  }
+
+  function handleFiltrosGraficasClick(e) {
+    if (e.target.tagName === 'BUTTON') {
+      document.querySelectorAll('.filtros-graficas button').forEach((b) => b.classList.remove('active'));
+      e.target.classList.add('active');
+      renderGraficas(e.target.dataset.periodo);
+    }
+  }
+
+  function handleHorasFiltrosClick(e) {
+    if (e.target.tagName === 'BUTTON') {
+      document.querySelectorAll('.horas-filtros button').forEach((b) => b.classList.remove('active'));
+      e.target.classList.add('active');
+      renderDistribucionHoras(e.target.dataset.rango);
+    }
+  }
+
+  function handleHistTabsClick(e) {
+    if (e.target.tagName === 'BUTTON') {
+      document.querySelectorAll('.hist-tabs button').forEach((b) => b.classList.remove('active'));
+      e.target.classList.add('active');
+      const sub = e.target.dataset.sub;
+      document.getElementById('hist-completo').style.display = sub === 'completo' ? 'block' : 'none';
+      document.getElementById('hist-compact').style.display = sub === 'compact' ? 'block' : 'none';
+
+      if (sub === 'completo') renderHistorialCompleto();
+      if (sub === 'compact') renderHistorialCompact();
+    }
+  }
+
+  function handleModoToggle(e) {
+    if (e.target.tagName === 'BUTTON') {
+      const vista = e.target.dataset.vista;
+      document.querySelectorAll('.vista-container').forEach((el) => el.classList.remove('active'));
+      document.querySelectorAll('.modo-toggle button').forEach((el) => el.classList.remove('active'));
+      document.getElementById(`vista-${vista}`).classList.add('active');
+      e.target.classList.add('active');
+
+      if (vista === 'historial') {
+        renderHistorialCompleto();
+      } else if (vista === 'horas') {
+        renderDistribucionHoras('hoy');
+      } else if (vista === 'graficas') {
+        renderGraficas('daily');
+      } else if (vista === 'actual') {
+        renderAll();
+      }
+    }
+  }
+
+  function handleThemeToggle() {
+    document.body.classList.toggle('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+    localStorage.setItem('theme', isDark ? 'dark-mode' : '');
+    if (document.getElementById('vista-graficas').classList.contains('active'))
+      renderGraficas(document.querySelector('.filtros-graficas button.active').dataset.periodo);
+  }
+
+  function handleEliminarLog(target) {
+    state.log = state.log.filter((l) => l.id !== parseInt(target.dataset.id));
+    saveLog();
+    renderDashboard();
+    renderLog();
+  }
+
+  function handleQuitarPuesto(target) {
+    if (confirm(`¿Seguro que quieres quitar el puesto ${target.dataset.puesto}?`)) {
+      state.puestos = state.puestos.filter((p) => p !== target.dataset.puesto);
+      savePuestos();
+      renderPuestos();
+      renderDashboard();
+    }
+  }
+
+  function handleAddTarea(target) {
+    const { puesto, tarea } = target.dataset;
+    const now = new Date();
+    state.log.unshift({ id: Date.now(), puesto, tarea, fecha: state.jornadaActual, hora: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) });
+    saveLog();
+    renderDashboard();
+    renderLog();
+    showPopup('Registro añadido con éxito');
+  }
+
+  function handleAddPuesto() {
+    const input = document.getElementById('nuevo-puesto-input');
+    const num = input.value.trim();
+    if (num && !state.puestos.map(Number).includes(parseInt(num))) {
+      state.puestos.push(num);
+      state.puestos.sort((a, b) => parseInt(a) - parseInt(b));
+      savePuestos();
+      renderAll();
+    }
+    input.value = '';
+  }
+
   // EVENTOS
   function setupListeners() {
-    document.getElementById('theme-toggle').addEventListener('click', () => {
-      document.body.classList.toggle('dark-mode');
-      const isDark = document.body.classList.contains('dark-mode');
-      document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
-      localStorage.setItem('theme', isDark ? 'dark-mode' : '');
-      if (document.getElementById('vista-graficas').classList.contains('active'))
-        renderGraficas(document.querySelector('.filtros-graficas button.active').dataset.periodo);
-    });
+    document.getElementById('theme-toggle').addEventListener('click', handleThemeToggle);
 
-    document.querySelector('.modo-toggle').addEventListener('click', (e) => {
-      if (e.target.tagName === 'BUTTON') {
-        const vista = e.target.dataset.vista;
-        document.querySelectorAll('.vista-container').forEach((el) => el.classList.remove('active'));
-        document.querySelectorAll('.modo-toggle button').forEach((el) => el.classList.remove('active'));
-        document.getElementById(`vista-${vista}`).classList.add('active');
-        e.target.classList.add('active');
+    document.querySelector('.modo-toggle').addEventListener('click', handleModoToggle);
 
-        if (vista === 'historial') {
-          renderHistorialCompleto();
-        } else if (vista === 'horas') {
-          renderDistribucionHoras('hoy');
-        } else if (vista === 'graficas') {
-          renderGraficas('daily');
-        } else if (vista === 'actual') {
-          renderAll();
-        }      }
-    });
+    document.querySelector('.hist-tabs').addEventListener('click', handleHistTabsClick);
 
-    document.querySelector('.hist-tabs').addEventListener('click', (e) => {
-      if (e.target.tagName === 'BUTTON') {
-        document.querySelectorAll('.hist-tabs button').forEach((b) => b.classList.remove('active'));
-        e.target.classList.add('active');
-        const sub = e.target.dataset.sub;
-        document.getElementById('hist-completo').style.display = sub === 'completo' ? 'block' : 'none';
-        document.getElementById('hist-compact').style.display = sub === 'compact' ? 'block' : 'none';
+    document.querySelector('.horas-filtros').addEventListener('click', handleHorasFiltrosClick);
 
-        if (sub === 'completo') renderHistorialCompleto();
-        if (sub === 'compact') renderHistorialCompact();
-      }
-    });
-
-    document.querySelector('.horas-filtros').addEventListener('click', (e) => {
-      if (e.target.tagName === 'BUTTON') {
-        document.querySelectorAll('.horas-filtros button').forEach((b) => b.classList.remove('active'));
-        e.target.classList.add('active');
-        renderDistribucionHoras(e.target.dataset.rango);
-      }
-    });
-
-    document.querySelector('.filtros-graficas').addEventListener('click', (e) => {
-      if (e.target.tagName === 'BUTTON') {
-        document.querySelectorAll('.filtros-graficas button').forEach((b) => b.classList.remove('active'));
-        e.target.classList.add('active');
-        renderGraficas(e.target.dataset.periodo);
-      }
-    });
+    document.querySelector('.filtros-graficas').addEventListener('click', handleFiltrosGraficasClick);
 
     document.getElementById('jornada-minutos-input').value = config.JORNADA_MINUTOS;
-    document.getElementById('jornada-minutos-input').addEventListener('change', (e) => {
-      const value = parseInt(e.target.value);
-      if (!isNaN(value) && value > 0) {
-        config.JORNADA_MINUTOS = value;
-        localStorage.setItem('jornadaMinutos', value);
-        renderDistribucionHoras('hoy');
-      } else {
-        e.target.value = config.JORNADA_MINUTOS;
-      }
-    });
+    document.getElementById('jornada-minutos-input').addEventListener('change', handleJornadaMinutosChange);
 
-    document.getElementById('add-puesto-btn').addEventListener('click', () => {
-      const input = document.getElementById('nuevo-puesto-input');
-      const num = input.value.trim();
-      if (num && !state.puestos.includes(num)) {
-        state.puestos.push(num);
-        state.puestos.sort((a, b) => parseInt(a) - parseInt(b));
-        savePuestos();
-        renderAll(); // <-- LLAMADA A renderAll
-      }
-      input.value = '';
-    });
+    document.getElementById('add-puesto-btn').addEventListener('click', handleAddPuesto);
 
-    document.getElementById('nuevo-puesto-input').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        document.getElementById('add-puesto-btn').click();
-      }
-    });
+    document.getElementById('nuevo-puesto-input').addEventListener('keypress', handleNuevoPuestoKeypress);
 
     document.getElementById('clear-today-btn').addEventListener('click', () => {
       if (confirm('¿Seguro que quieres borrar todos los registros de la jornada actual (sin guardar)?')) {
@@ -640,38 +699,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('finalizar-jornada-btn').addEventListener('click', finalizarJornada);
 
-    document.getElementById('reset-colors-btn').addEventListener('click', () => {
-      if (confirm('¿Resetear todos los colores de puestos?')) {
-        state.colorPuestos = {};
-        saveColorPuestos();
-        renderAll();
-      }
-    });
+    document.getElementById('reset-colors-btn').addEventListener('click', handleResetColorsClick);
 
     document.body.addEventListener('click', (e) => {
       const target = e.target;
       if (target.classList.contains('add-tarea-btn')) {
-        const { puesto, tarea } = target.dataset;
-        const now = new Date();
-        state.log.unshift({ id: Date.now(), puesto, tarea, fecha: state.jornadaActual, hora: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) });
-        saveLog();
-        renderDashboard();
-        renderLog();
-        showPopup('Registro añadido con éxito');
+        handleAddTarea(target);
       }
       if (target.classList.contains('quitar-puesto-btn')) {
-        if (confirm(`¿Seguro que quieres quitar el puesto ${target.dataset.puesto}?`)) {
-          state.puestos = state.puestos.filter((p) => p !== target.dataset.puesto);
-          savePuestos();
-          renderPuestos();
-          renderDashboard();
-        }
+        handleQuitarPuesto(target);
       }
       if (target.classList.contains('eliminar-log-btn')) {
-        state.log = state.log.filter((l) => l.id !== parseInt(target.dataset.id));
-        saveLog();
-        renderDashboard();
-        renderLog();
+        handleEliminarLog(target);
       }
       if (target.classList.contains('eliminar-dia-btn')) {
         eliminarDiaHistorial(target.dataset.fecha);
