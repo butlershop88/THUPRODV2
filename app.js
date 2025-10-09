@@ -682,7 +682,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelector('.filtros-graficas').addEventListener('click', handleFiltrosGraficasClick);
 
-    document.getElementById('jornada-minutos-input').value = config.JORNADA_MINUTOS;
     document.getElementById('jornada-minutos-input').addEventListener('change', handleJornadaMinutosChange);
 
     document.getElementById('add-puesto-btn').addEventListener('click', handleAddPuesto);
@@ -731,6 +730,8 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.add('dark-mode');
       document.getElementById('theme-toggle').textContent = '☀️';
     }
+    // Initialize the value of jornada-minutos-input here
+    document.getElementById('jornada-minutos-input').value = config.JORNADA_MINUTOS;
     setupListeners();
     renderAll();
   }
