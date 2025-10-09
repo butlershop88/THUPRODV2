@@ -730,8 +730,14 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.add('dark-mode');
       document.getElementById('theme-toggle').textContent = '☀️';
     }
-    // Initialize the value of jornada-minutos-input here
-    document.getElementById('jornada-minutos-input').value = config.JORNADA_MINUTOS;
+    // Debugging: Check if jornada-minutos-input exists
+    const jornadaMinutosInput = document.getElementById('jornada-minutos-input');
+    console.log('jornadaMinutosInput element:', jornadaMinutosInput);
+    if (jornadaMinutosInput) {
+      jornadaMinutosInput.value = config.JORNADA_MINUTOS;
+    } else {
+      console.error('Error: Element with ID "jornada-minutos-input" not found in init().');
+    }
     setupListeners();
     renderAll();
   }
