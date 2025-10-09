@@ -158,6 +158,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 2000);
   }
   
+  function roundToNearestTenth(num) {
+    return Math.round(num * 10) / 10;
+  }
+
   // Renderizado de TODA la UI principal
   function renderAll() {
     renderPuestos();
@@ -402,7 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const asignacion = {};
     Object.keys(esfuerzo).forEach(p => {
         const minutos = (esfuerzo[p] / totalEsfuerzo) * config.JORNADA_MINUTOS;
-        asignacion[p] = { minutos, horasDecimal: minutos / 60 };
+        asignacion[p] = { minutos, horasDecimal: roundToNearestTenth(minutos / 60) };
     });
 
     const hoyISO = yyyyMmDd(new Date()); // Esto debería ser la fecha actual para guardar, no la del rango
@@ -457,7 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const asignacion = {};
       Object.keys(esfuerzo).forEach(p => {
         const minutos = (esfuerzo[p] / totalEsfuerzo) * config.JORNADA_MINUTOS;
-        asignacion[p] = { minutos, horasDecimal: minutos / 60 };
+        asignacion[p] = { minutos, horasDecimal: roundToNearestTenth(minutos / 60) };
       });
       saveHoras(hoyISO, { fecha: hoyISO, asignacion });
     }
