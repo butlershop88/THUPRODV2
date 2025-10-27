@@ -3,7 +3,8 @@ const urlsToCache = [
     './',
     './index.html',
     './style.css',
-    './app.js'
+    './app.js',
+    './lib/chart.min.js'
 ];
 
 self.addEventListener('install', event => {
