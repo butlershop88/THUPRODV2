@@ -1,15 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
   // CONFIGURACION Y CONSTANTES
   const config = {
-    ordenTareas: ['Flejar+Paquete', 'Paquete', 'Bobina', 'Cuna', 'Tacos'],
-    abrev: { 'Flejar+Paquete': 'F-P', Paquete: 'P', Bobina: 'B', Cuna: 'C', Tacos: 'T' },
-    tiempos: { 'Flejar+Paquete': 2, Paquete: 1, Bobina: 3, Cuna: 1, Tacos: 2 },
+    ordenTareas: ['Flejar+Paquete', 'Paquete', 'Bobina', 'Cuna'],
+    abrev: { 'Flejar+Paquete': 'F-P', Paquete: 'P', Bobina: 'B', Cuna: 'C' },
+    tiempos: { 'Flejar+Paquete': 6, Paquete: 3, Bobina: 8, Cuna: 5 },
     coloresTareas: {
       'Flejar+Paquete': 'rgba(25, 135, 84, 0.8)', // verde para F+P
       'Paquete': 'rgba(255, 165, 0, 0.8)', // naranja para P
       'Bobina': 'rgba(128, 128, 128, 0.8)', // gris para B
       'Cuna': 'rgba(165, 42, 42, 0.8)', // marrón para C
-      'Tacos': '#a2785b',
     },
     coloresFijosPuestos: {
       '23': '#FF4D4D',      // rojo
@@ -163,19 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return Math.round(num * 10) / 10;
   }
 
-  function minutosAHorasMinutos(minutos) {
-    const h = Math.floor(minutos / 60);
-    const m = Math.round(minutos % 60);
-    return `${h}h ${m}m`;
-  }
-
-  function updateHorasDisplay() {
-    const display = document.getElementById('jornada-horas-display');
-    if (display) {
-      display.textContent = `(${minutosAHorasMinutos(config.JORNADA_MINUTOS)})`;
-    }
-  }
-
   // Renderizado de TODA la UI principal
   function renderAll() {
     renderPuestos();
@@ -206,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Renderizar resumen diario
   function renderDashboard() {
-    const hoyISO = state.jornadaActual;
+    const hoyISO = yyyyMmDd(new Date(state.jornadaActual));
     const logHoy = state.log.filter((l) => l.fecha === state.jornadaActual);
     const contador = logHoy.reduce((acc, l) => {
       acc[l.puesto] = acc[l.puesto] || { total: 0, ...config.ordenTareas.reduce((a, t) => ({ ...a, [t]: 0 }), {}) };
@@ -214,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
       acc[l.puesto].total++;
       return acc;
     }, {});
+    saveResumen(hoyISO, { fecha: hoyISO, data: contador });
 
     const puestosOrdenados = Object.keys(contador).sort((a, b) => contador[b].total - contador[a].total);
     if (puestosOrdenados.length === 0) {
@@ -269,47 +256,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     cont.innerHTML = fechas
       .map((f) => {
-        const fechaDate = new Date(f + 'T00:00:00');
-        const fechaFormateada = fechaDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-        const fechaISO = f;
+        const fechaFormateada = new Date(f).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+        const fechaISO = yyyyMmDd(new Date(f));
         return (
           '<div class="puesto"><div class="puesto-header"><h4 style="margin:0;">' +
           fechaFormateada +
           '</h4><button class="eliminar-dia-completo-btn" data-fecha="' + fechaISO + '" aria-label="Eliminar día">🗑️</button></div>' +
           logAgrupado[f]
-            .map((l) => `<div class="log-entry"><span><strong style="color:${getColorPuesto(l.puesto)};">Puesto ${l.puesto}</strong> - ${l.hora} - ${config.abrev[l.tarea]}</span><button class="eliminar-log-historial-btn" data-id="${l.id}" aria-label="Eliminar registro">🗑️</button></div>`)
+            .map((l) => `<div><strong style="color:${getColorPuesto(l.puesto)};">Puesto ${l.puesto}</strong> - ${l.hora} - ${config.abrev[l.tarea]}</div>`)
             .join('') +
           '</div>'
         );
       })
       .join('');
-  }
-
-  // Función para eliminar un registro individual del historial
-  function handleEliminarLogHistorial(target) {
-    const id = parseInt(target.dataset.id);
-    if (!confirm('¿Seguro que quieres eliminar este registro del historial?')) {
-      return;
-    }
-
-    let historialCompleto = JSON.parse(localStorage.getItem('historialCompleto') || '[]');
-    const itemToDelete = historialCompleto.find(l => l.id === id);
-    
-    if (itemToDelete) {
-      historialCompleto = historialCompleto.filter((l) => l.id !== id);
-      localStorage.setItem('historialCompleto', JSON.stringify(historialCompleto));
-      
-      // Invalidate summary for the affected date so it gets recalculated
-      localStorage.removeItem(`resumen:${itemToDelete.fecha}`);
-      localStorage.removeItem(`horas:${itemToDelete.fecha}`);
-
-      renderHistorialCompleto();
-      // If compact view is active, re-render it too
-      if (document.getElementById('hist-compact').style.display !== 'none') {
-        renderHistorialCompact();
-      }
-      showPopup('Registro eliminado del historial');
-    }
   }
 
   // Función para eliminar un día completo del historial
@@ -320,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Eliminar del historial completo
     let historialCompleto = JSON.parse(localStorage.getItem('historialCompleto') || '[]');
-    historialCompleto = historialCompleto.filter(l => l.fecha !== fechaISO);
+    historialCompleto = historialCompleto.filter(l => yyyyMmDd(new Date(l.fecha)) !== fechaISO);
     localStorage.setItem('historialCompleto', JSON.stringify(historialCompleto));
 
     // Eliminar resumen guardado
@@ -338,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderHistorialCompact() {
     const cont = document.getElementById('hist-compact');
     const historialCompleto = JSON.parse(localStorage.getItem('historialCompleto') || '[]');
-    const fechasSet = new Set(historialCompleto.map((l) => l.fecha));
+    const fechasSet = new Set(historialCompleto.map((l) => yyyyMmDd(new Date(l.fecha))));
     const fechas = Array.from(fechasSet).sort((a, b) => new Date(b) - new Date(a));
 
     if (fechas.length === 0) {
@@ -351,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Cargar resumen de tareas
         let resumen = loadResumen(fechaISO);
         if (!resumen) {
-          const delDia = historialCompleto.filter((l) => l.fecha === fechaISO);
+          const delDia = historialCompleto.filter((l) => yyyyMmDd(new Date(l.fecha)) === fechaISO);
           const contador = delDia.reduce((acc, l) => {
             acc[l.puesto] = acc[l.puesto] || { total: 0, ...config.ordenTareas.reduce((a, t) => ({ ...a, [t]: 0 }), {}) };
             acc[l.puesto][l.tarea]++;
@@ -365,8 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Cargar datos de horas
         const horas = loadHoras(fechaISO);
 
-        const fechaDate = new Date(fechaISO + 'T00:00:00');
-        const titulo = fechaDate.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+        const titulo = new Date(fechaISO).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
         const puestosOrdenados = Object.keys(resumen.data).sort((a, b) => resumen.data[b].total - resumen.data[a].total);
 
         // Tabla de Resumen de Tareas
@@ -422,13 +380,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const cont = document.getElementById('horas-container');
 
     const { start, end } = fechasDeRango(rango);
-    const startStr = yyyyMmDd(start);
-    const endStr = yyyyMmDd(end);
 
-    const historialCompleto = JSON.parse(localStorage.getItem('historialCompleto') || '[]');
-    const logCompleto = [...historialCompleto, ...state.log];
-
-    const logFiltrado = logCompleto.filter(l => l.fecha >= startStr && l.fecha <= endStr);
+    const logFiltrado = state.log.filter(l => {
+        const d = new Date(l.fecha);
+        return d >= start && d <= end;
+    });
 
     if (logFiltrado.length === 0) {
         cont.innerHTML = '<p>No hay datos para el rango seleccionado.</p>';
@@ -448,52 +404,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const asignacion = {};
-    let minutosTotalesAsignados = 0;
-    const puestos = Object.keys(esfuerzo);
-
-    puestos.forEach(p => {
-        const minutosExactos = (esfuerzo[p] / totalEsfuerzo) * config.JORNADA_MINUTOS;
-        const horasExactas = minutosExactos / 60;
-        
-        // Redondeo a 0.05 o 0.10
-        let horasRedondeadas = Math.round(horasExactas * 20) / 20; // Redondeo al 0.05 más cercano
-        if (Math.abs(horasRedondeadas - horasExactas) > 0.025) { // Si está más cerca de un múltiplo de 0.1
-            horasRedondeadas = Math.round(horasExactas * 10) / 10;
-        }
-
-        const minutosRedondeados = horasRedondeadas * 60;
-        asignacion[p] = { minutos: minutosRedondeados, horasDecimal: horasRedondeadas };
-        minutosTotalesAsignados += minutosRedondeados;
+    Object.keys(esfuerzo).forEach(p => {
+        const minutos = (esfuerzo[p] / totalEsfuerzo) * config.JORNADA_MINUTOS;
+        asignacion[p] = { minutos, horasDecimal: roundToNearestTenth(minutos / 60) };
     });
-
-    // Ajuste para que la suma sea exacta
-    let diferencia = config.JORNADA_MINUTOS - minutosTotalesAsignados;
-    const puestosOrdenadosPorError = puestos.sort((a, b) => {
-        const errorA = Math.abs(asignacion[a].minutos - (esfuerzo[a] / totalEsfuerzo) * config.JORNADA_MINUTOS);
-        const errorB = Math.abs(asignacion[b].minutos - (esfuerzo[b] / totalEsfuerzo) * config.JORNADA_MINUTOS);
-        return errorB - errorA;
-    });
-
-    while (Math.abs(diferencia) > 0.1) {
-        const ajuste = diferencia > 0 ? 1 : -1;
-        let ajustado = false;
-        for (const p of puestosOrdenadosPorError) {
-            if ((diferencia > 0 && asignacion[p].minutos < (esfuerzo[p] / totalEsfuerzo) * config.JORNADA_MINUTOS) ||
-                (diferencia < 0 && asignacion[p].minutos > (esfuerzo[p] / totalEsfuerzo) * config.JORNADA_MINUTOS)) {
-                asignacion[p].minutos += ajuste;
-                asignacion[p].horasDecimal = asignacion[p].minutos / 60;
-                diferencia -= ajuste;
-                ajustado = true;
-                break;
-            }
-        }
-        if (!ajustado) { // Si no se pudo ajustar, hacerlo en el que tenga más minutos
-            const p = puestosOrdenadosPorError[0];
-            asignacion[p].minutos += ajuste;
-            asignacion[p].horasDecimal = asignacion[p].minutos / 60;
-            diferencia -= ajuste;
-        }
-    }
 
     const hoyISO = yyyyMmDd(new Date()); // Esto debería ser la fecha actual para guardar, no la del rango
     const horasData = { fecha: hoyISO, asignacion };
@@ -520,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const hoyISO = state.jornadaActual;
+    const hoyISO = yyyyMmDd(new Date(state.jornadaActual));
     const logHoy = state.log.filter((l) => l.fecha === state.jornadaActual);
 
     if (logHoy.length === 0) {
@@ -570,7 +484,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 4. Iniciar Nueva Jornada
     const fechaJornadaFinalizada = state.jornadaActual;
-    state.jornadaActual = new Date().toISOString().split('T')[0];
+    const nuevaFecha = new Date();
+    nuevaFecha.setDate(new Date(fechaJornadaFinalizada).getDate() + 1);
+    state.jornadaActual = nuevaFecha.toISOString().split('T')[0];
     saveJornada();
 
     // 5. Actualizar UI y notificar
@@ -598,15 +514,9 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
     }
 
-    const fechaInicioStr = yyyyMmDd(fechaInicio);
-    const hoyStr = yyyyMmDd(new Date());
-
-    const historialCompleto = JSON.parse(localStorage.getItem('historialCompleto') || '[]');
-    const logCompleto = [...historialCompleto, ...state.log];
-
     const logParaGraficar = (periodo === 'daily')
       ? state.log.filter((l) => l.fecha === getHoy())
-      : logCompleto.filter((l) => l.fecha >= fechaInicioStr && l.fecha <= hoyStr);
+      : JSON.parse(localStorage.getItem('historialCompleto') || '[]').filter((l) => new Date(l.fecha) >= fechaInicio);
 
     const contador = logParaGraficar.reduce((acc, l) => {
       acc[l.puesto] = acc[l.puesto] || { ...config.ordenTareas.reduce((a, t) => ({ ...a, [t]: 0 }), {}), total: 0 };
@@ -782,7 +692,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('nuevo-puesto-input').addEventListener('keypress', handleNuevoPuestoKeypress);
 
-    document.getElementById('clear-today-btn').addEventListener('click', handleClearTodayClick);
+    document.getElementById('clear-today-btn').addEventListener('click', () => {
+      if (confirm('¿Seguro que quieres borrar todos los registros de la jornada actual (sin guardar)?')) {
+        state.log = state.log.filter((l) => l.fecha !== state.jornadaActual);
+        saveLog();
+        renderAll();
+      }
+    });
 
         document.getElementById('finalizar-jornada-btn').addEventListener('click', finalizarJornada);
 
@@ -798,9 +714,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (target.classList.contains('eliminar-log-btn')) {
         handleEliminarLog(target);
-      }
-      if (target.classList.contains('eliminar-log-historial-btn')) {
-        handleEliminarLogHistorial(target);
       }
       if (target.classList.contains('eliminar-dia-btn')) {
         eliminarDiaHistorial(target.dataset.fecha);
@@ -821,11 +734,11 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.classList.add('dark-mode');
       document.getElementById('theme-toggle').textContent = '☀️';
     }
+    // Debugging: Check if jornada-minutos-input exists
     const jornadaMinutosInput = document.getElementById('jornada-minutos-input');
+    console.log('jornadaMinutosInput element:', jornadaMinutosInput);
     if (jornadaMinutosInput) {
       jornadaMinutosInput.value = config.JORNADA_MINUTOS;
-      updateHorasDisplay();
-      jornadaMinutosInput.addEventListener('input', updateHorasDisplay);
     } else {
       console.error('Error: Element with ID "jornada-minutos-input" not found in init().');
     }
