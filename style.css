@@ -121,9 +121,6 @@ body.dark-mode .puesto {
 .tarea-buttons button.C {
   background-color: var(--color-c);
 }
-.tarea-buttons button.T {
-  background-color: #a2785b;
-}
 .log-entry {
   display: flex;
   justify-content: space-between;
