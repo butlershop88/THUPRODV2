@@ -10,15 +10,16 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "ICON_APP_APOYO.png",
+      "src": "data:image/svg+xml,%3csvg width='192' height='192' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='%233498db'/%3e%3ctext x='50%25' y='50%25' font-size='100' text-anchor='middle' dy='0.35em'%3e📋%3c/text%3e%3c/svg%3e",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     },
     {
-      "src": "ICON_APP_APOYO.png",
+      "src": "data:image/svg+xml,%3csvg width='512' height='512' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='%233498db'/%3e%3ctext x='50%25' y='50%25' font-size='280' text-anchor='middle' dy='0.35em'%3e📋%3c/text%3e%3c/svg%3e",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/svg+xml", 
+      "purpose": "any maskable"
     }
   ]
 }
-
